@@ -6,6 +6,28 @@
 <title>EA$Y — Educação Financeira para Jovens</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Fredoka+One&display=swap" rel="stylesheet">
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+// ============================================================
+//  FIREBASE CONFIG
+//  ⚠️  Preencha apiKey e appId com os valores do seu projeto em:
+//      Firebase Console → Configurações → Seus apps → Web
+// ============================================================
+const FIREBASE_CONFIG = {
+  apiKey:            "YOUR_API_KEY",
+  authDomain:        "easy-edfin.firebaseapp.com",
+  projectId:         "easy-edfin",
+  storageBucket:     "easy-edfin.appspot.com",
+  messagingSenderId: "234375812950",
+  appId:             "YOUR_APP_ID"
+};
+firebase.initializeApp(FIREBASE_CONFIG);
+const fbAuth = firebase.auth();
+const fbDb   = firebase.firestore();
+</script>
 <style>
 :root {
   --g1: #0d4a2a; --g2: #1a6e3e; --g3: #2e9d6b; --g4: #3dbd82; --g5: #5dd4a0;
@@ -360,9 +382,117 @@ body { font-family:'Nunito',sans-serif; background:var(--bg); color:var(--text);
   .stats-row { grid-template-columns:repeat(3,1fr) }
   .hdr-stats { display:none }
 }
+
+/* ===== FIREBASE AUTH - LOGIN SCREEN ===== */
+#auth-screen {
+  position: fixed; inset: 0; z-index: 9999;
+  background: linear-gradient(135deg, #0d4a2a 0%, #1a6e3e 40%, #2e9d6b 100%);
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Nunito', sans-serif;
+}
+#auth-screen.hidden { display: none; }
+.auth-card {
+  background: #fff; border-radius: 28px; padding: 40px 36px;
+  max-width: 420px; width: 92%; box-shadow: 0 20px 60px rgba(0,0,0,.3);
+  text-align: center; animation: authPop .5s cubic-bezier(.34,1.56,.64,1);
+}
+@keyframes authPop { from{opacity:0;transform:scale(.85) translateY(20px)} to{opacity:1;transform:scale(1) translateY(0)} }
+.auth-logo { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 6px; }
+.auth-logo-emoji { font-size: 2.8rem; }
+.auth-logo-text { font-family: 'Fredoka One', cursive; font-size: 2.2rem; color: #1a6e3e; }
+.auth-tagline { color: #8a9a8a; font-size: .9rem; margin-bottom: 28px; font-weight: 600; }
+.auth-tabs { display: flex; background: #f0faf5; border-radius: 14px; padding: 4px; margin-bottom: 24px; }
+.auth-tab { flex: 1; padding: 9px; border: none; background: transparent; border-radius: 11px; font-family: 'Nunito', sans-serif; font-weight: 800; font-size: .88rem; cursor: pointer; color: #8a9a8a; transition: .2s; }
+.auth-tab.active { background: #fff; color: #1a6e3e; box-shadow: 0 2px 8px rgba(0,0,0,.1); }
+.auth-form { display: flex; flex-direction: column; gap: 12px; }
+.auth-input-wrap { position: relative; }
+.auth-input-wrap .auth-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); font-size: 1.1rem; }
+.auth-input { width: 100%; padding: 13px 14px 13px 42px; border: 2px solid #e4f5ed; border-radius: 14px; font-family: 'Nunito', sans-serif; font-size: .95rem; font-weight: 600; color: #1a2e1a; outline: none; transition: .2s; background: #f0faf5; }
+.auth-input:focus { border-color: #3dbd82; background: #fff; }
+.auth-btn-primary { background: linear-gradient(135deg, #3dbd82, #1a6e3e); color: #fff; border: none; border-radius: 14px; padding: 14px; font-family: 'Nunito', sans-serif; font-weight: 900; font-size: 1rem; cursor: pointer; transition: .2s; margin-top: 4px; }
+.auth-btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(46,157,107,.4); }
+.auth-btn-primary:disabled { opacity: .6; cursor: not-allowed; transform: none; }
+.auth-divider { display: flex; align-items: center; gap: 12px; margin: 4px 0; }
+.auth-divider::before, .auth-divider::after { content:''; flex:1; height:1px; background:#e4f5ed; }
+.auth-divider span { color: #8a9a8a; font-size: .8rem; font-weight: 700; }
+.auth-btn-google { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; padding: 13px; border: 2px solid #e0e0e0; border-radius: 14px; background: #fff; font-family: 'Nunito', sans-serif; font-weight: 800; font-size: .93rem; color: #3c4043; cursor: pointer; transition: .2s; }
+.auth-btn-google:hover { background: #f8f8f8; border-color: #bbb; box-shadow: 0 2px 8px rgba(0,0,0,.1); }
+.auth-btn-google svg { width: 20px; height: 20px; flex-shrink: 0; }
+.auth-error { background: #fdecea; border: 1.5px solid #e53935; color: #c62828; border-radius: 12px; padding: 10px 14px; font-size: .85rem; font-weight: 700; display: none; text-align: left; margin-bottom: 4px; }
+.auth-error.show { display: block; }
+.auth-loading { display: inline-block; width: 18px; height: 18px; border: 3px solid rgba(255,255,255,.4); border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite; vertical-align: middle; margin-right: 6px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.hdr-user { display: flex; align-items: center; gap: 8px; }
+.hdr-avatar { width: 34px; height: 34px; border-radius: 50%; background: rgba(255,255,255,.25); border: 2px solid rgba(255,255,255,.5); display: flex; align-items: center; justify-content: center; font-size: 1rem; font-weight: 900; color: #fff; overflow: hidden; }
+.hdr-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.hdr-username { color: #fff; font-weight: 800; font-size: .82rem; max-width: 100px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.btn-logout { padding: 6px 12px; border-radius: 20px; font-family: 'Nunito', sans-serif; font-weight: 800; font-size: .78rem; cursor: pointer; border: 2px solid rgba(255,255,255,.4); color: #fff; background: rgba(229,57,53,.6); transition: .2s; }
+.btn-logout:hover { background: rgba(229,57,53,.9); border-color: #fff; }
 </style>
 </head>
 <body>
+
+<!-- ===== AUTH SCREEN ===== -->
+<div id="auth-screen">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <span class="auth-logo-emoji">💰</span>
+      <span class="auth-logo-text">EA$Y</span>
+    </div>
+    <p class="auth-tagline">Educação Financeira para Jovens</p>
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="tab-login" onclick="switchAuthTab('login')">Entrar</button>
+      <button class="auth-tab" id="tab-register" onclick="switchAuthTab('register')">Criar conta</button>
+    </div>
+    <div id="auth-error" class="auth-error"></div>
+    <div id="form-login" class="auth-form">
+      <div class="auth-input-wrap">
+        <span class="auth-icon">✉️</span>
+        <input class="auth-input" type="email" id="login-email" placeholder="Seu e-mail" autocomplete="email"/>
+      </div>
+      <div class="auth-input-wrap">
+        <span class="auth-icon">🔒</span>
+        <input class="auth-input" type="password" id="login-pass" placeholder="Sua senha" autocomplete="current-password"/>
+      </div>
+      <button class="auth-btn-primary" id="btn-login" onclick="doEmailLogin()">Entrar →</button>
+      <div class="auth-divider"><span>ou</span></div>
+      <button class="auth-btn-google" onclick="doGoogleLogin()">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+          <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+          <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+          <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+        </svg>
+        Continuar com Google
+      </button>
+    </div>
+    <div id="form-register" class="auth-form" style="display:none">
+      <div class="auth-input-wrap">
+        <span class="auth-icon">👤</span>
+        <input class="auth-input" type="text" id="reg-name" placeholder="Seu nome" autocomplete="name"/>
+      </div>
+      <div class="auth-input-wrap">
+        <span class="auth-icon">✉️</span>
+        <input class="auth-input" type="email" id="reg-email" placeholder="Seu e-mail" autocomplete="email"/>
+      </div>
+      <div class="auth-input-wrap">
+        <span class="auth-icon">🔒</span>
+        <input class="auth-input" type="password" id="reg-pass" placeholder="Crie uma senha (mín. 6 caracteres)" autocomplete="new-password"/>
+      </div>
+      <button class="auth-btn-primary" id="btn-register" onclick="doEmailRegister()">Criar conta →</button>
+      <div class="auth-divider"><span>ou</span></div>
+      <button class="auth-btn-google" onclick="doGoogleLogin()">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+          <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+          <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+          <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+        </svg>
+        Continuar com Google
+      </button>
+    </div>
+  </div>
+</div>
 
 <!-- ===== HEADER ===== -->
 <header class="hdr">
@@ -376,6 +506,11 @@ body { font-family:'Nunito',sans-serif; background:var(--bg); color:var(--text);
   <div class="hdr-btns">
     <button class="btn-hdr" onclick="showView('dashboard')">🏠 Início</button>
     <button class="btn-hdr" onclick="showView('progress')">📊 Progresso</button>
+  </div>
+  <div class="hdr-user" id="hdr-user" style="display:none">
+    <div class="hdr-avatar" id="hdr-avatar">👤</div>
+    <span class="hdr-username" id="hdr-username"></span>
+    <button class="btn-logout" onclick="doLogout()">Sair</button>
   </div>
 </header>
 
@@ -516,12 +651,151 @@ const STATE = {
   celebrationCallback: null
 };
 
-function saveState() { try { localStorage.setItem('easy_state', JSON.stringify(STATE)); } catch(e){} }
+// ============================================================
+//  FIREBASE AUTH HELPERS
+// ============================================================
+let _currentUser = null;
+let _saveTimer   = null;
+
+function authErrorMsg(code) {
+  const msgs = {
+    'auth/invalid-email':          'E-mail inválido.',
+    'auth/user-not-found':         'Usuário não encontrado.',
+    'auth/wrong-password':         'Senha incorreta.',
+    'auth/email-already-in-use':   'Este e-mail já está cadastrado.',
+    'auth/weak-password':          'Senha muito fraca (mínimo 6 caracteres).',
+    'auth/popup-closed-by-user':   'Login cancelado.',
+    'auth/network-request-failed': 'Erro de rede. Verifique sua conexão.',
+    'auth/invalid-credential':     'E-mail ou senha incorretos.',
+  };
+  return msgs[code] || 'Erro ao autenticar. Tente novamente.';
+}
+
+function showAuthError(msg) {
+  const el = document.getElementById('auth-error');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 5000);
+}
+
+function setAuthBtnLoading(btnId, loading) {
+  const btn = document.getElementById(btnId);
+  if (!btn) return;
+  if (loading) {
+    btn.dataset.orig = btn.innerHTML;
+    btn.innerHTML = '<span class="auth-loading"></span> Aguarde...';
+    btn.disabled = true;
+  } else {
+    btn.innerHTML = btn.dataset.orig || btn.innerHTML;
+    btn.disabled = false;
+  }
+}
+
+function switchAuthTab(tab) {
+  document.getElementById('tab-login').classList.toggle('active', tab === 'login');
+  document.getElementById('tab-register').classList.toggle('active', tab === 'register');
+  document.getElementById('form-login').style.display    = tab === 'login'    ? 'flex' : 'none';
+  document.getElementById('form-register').style.display = tab === 'register' ? 'flex' : 'none';
+  document.getElementById('auth-error').classList.remove('show');
+}
+
+async function doEmailLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const pass  = document.getElementById('login-pass').value;
+  if (!email || !pass) { showAuthError('Preencha e-mail e senha.'); return; }
+  setAuthBtnLoading('btn-login', true);
+  try {
+    await fbAuth.signInWithEmailAndPassword(email, pass);
+  } catch(e) {
+    showAuthError(authErrorMsg(e.code));
+    setAuthBtnLoading('btn-login', false);
+  }
+}
+
+async function doEmailRegister() {
+  const name  = document.getElementById('reg-name').value.trim();
+  const email = document.getElementById('reg-email').value.trim();
+  const pass  = document.getElementById('reg-pass').value;
+  if (!name || !email || !pass) { showAuthError('Preencha todos os campos.'); return; }
+  if (pass.length < 6) { showAuthError('Senha muito curta. Use no mínimo 6 caracteres.'); return; }
+  setAuthBtnLoading('btn-register', true);
+  try {
+    const cred = await fbAuth.createUserWithEmailAndPassword(email, pass);
+    await cred.user.updateProfile({ displayName: name });
+  } catch(e) {
+    showAuthError(authErrorMsg(e.code));
+    setAuthBtnLoading('btn-register', false);
+  }
+}
+
+async function doGoogleLogin() {
+  const provider = new firebase.auth.GoogleAuthProvider();
+  try {
+    await fbAuth.signInWithPopup(provider);
+  } catch(e) {
+    if (e.code !== 'auth/popup-closed-by-user') showAuthError(authErrorMsg(e.code));
+  }
+}
+
+async function doLogout() {
+  if (!confirm('Deseja sair da sua conta?')) return;
+  await fbAuth.signOut();
+}
+
+function updateHeaderUser(user) {
+  const wrap = document.getElementById('hdr-user');
+  const av   = document.getElementById('hdr-avatar');
+  const nm   = document.getElementById('hdr-username');
+  if (user) {
+    wrap.style.display = 'flex';
+    nm.textContent = user.displayName || user.email.split('@')[0];
+    if (user.photoURL) {
+      av.innerHTML = `<img src="${user.photoURL}" alt="avatar" referrerpolicy="no-referrer">`;
+    } else {
+      av.textContent = (user.displayName || user.email)[0].toUpperCase();
+    }
+  } else {
+    wrap.style.display = 'none';
+  }
+}
+
+// ============================================================
+//  STATE — SAVE / LOAD  (localStorage + Firestore por usuário)
+// ============================================================
+function saveState() {
+  try { localStorage.setItem('easy_state_local', JSON.stringify(STATE)); } catch(e){}
+  if (_currentUser) {
+    clearTimeout(_saveTimer);
+    _saveTimer = setTimeout(() => {
+      const payload = {
+        xp: STATE.xp,
+        completed: STATE.completed,
+        quizScores: STATE.quizScores,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      };
+      fbDb.collection('users').doc(_currentUser.uid).set(payload, { merge: true }).catch(()=>{});
+    }, 1500);
+  }
+}
+
 function loadState() {
   try {
-    const s = localStorage.getItem('easy_state');
+    const s = localStorage.getItem('easy_state_local');
     if(s) { const d = JSON.parse(s); Object.assign(STATE, d); }
   } catch(e){}
+}
+
+async function loadStateFromFirestore(uid) {
+  try {
+    const doc = await fbDb.collection('users').doc(uid).get();
+    if (doc.exists) {
+      const d = doc.data();
+      if (d.xp !== undefined)         STATE.xp         = d.xp;
+      if (d.completed !== undefined)   STATE.completed  = d.completed;
+      if (d.quizScores !== undefined)  STATE.quizScores = d.quizScores;
+      try { localStorage.setItem('easy_state_local', JSON.stringify(STATE)); } catch(e){}
+    }
+  } catch(e) { console.warn('Firestore load error:', e); }
 }
 
 // ============================================================
@@ -2056,19 +2330,32 @@ function switchProgTab(tab, el) {
 }
 
 // ============================================================
-//  INIT
+//  INIT — controlado pelo Firebase Auth
 // ============================================================
 window.addEventListener('DOMContentLoaded', () => {
-  loadState();
-  updateHeader();
-  renderDashboard();
-  checkBadges();
-  
-  // Animate XP ring on progress page
-  setTimeout(() => {
-    const fill = document.getElementById('xp-ring-fill');
-    if(fill) fill.style.transition = 'stroke-dashoffset 1.5s ease';
-  }, 100);
+  fbAuth.onAuthStateChanged(async (user) => {
+    const authScreen = document.getElementById('auth-screen');
+    if (user) {
+      _currentUser = user;
+      loadState();
+      await loadStateFromFirestore(user.uid);
+      updateHeaderUser(user);
+      updateHeader();
+      renderDashboard();
+      checkBadges();
+      authScreen.classList.add('hidden');
+      setTimeout(() => {
+        const fill = document.getElementById('xp-ring-fill');
+        if(fill) fill.style.transition = 'stroke-dashoffset 1.5s ease';
+      }, 100);
+    } else {
+      _currentUser = null;
+      updateHeaderUser(null);
+      STATE.xp = 0; STATE.completed = {}; STATE.quizScores = {};
+      try { localStorage.removeItem('easy_state_local'); } catch(e){}
+      authScreen.classList.remove('hidden');
+    }
+  });
 });
 
 </script>
