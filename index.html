@@ -12,17 +12,18 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
 // ============================================================
-//  FIREBASE CONFIG
-//  ⚠️  Preencha apiKey e appId com os valores do seu projeto em:
-//      Firebase Console → Configurações → Seus apps → Web
+//  FIREBASE CONFIG — Web SDK (seguro para código público)
+//  Estas chaves são públicas por design do Firebase.
+//  A segurança dos dados é garantida pelas Regras do Firestore.
+//  NUNCA exponha credenciais do Admin SDK (serviceAccountKey.json).
 // ============================================================
 const FIREBASE_CONFIG = {
-  apiKey:            "YOUR_API_KEY",
+  apiKey:            "AIzaSyCKfGkIGuj1Jwv-l-apVrTy2VFTyxQKGrc",
   authDomain:        "easy-edfin.firebaseapp.com",
   projectId:         "easy-edfin",
-  storageBucket:     "easy-edfin.appspot.com",
+  storageBucket:     "easy-edfin.firebasestorage.app",
   messagingSenderId: "234375812950",
-  appId:             "YOUR_APP_ID"
+  appId:             "1:234375812950:web:a300c8de01c41cb537e8f7"
 };
 firebase.initializeApp(FIREBASE_CONFIG);
 const fbAuth = firebase.auth();
