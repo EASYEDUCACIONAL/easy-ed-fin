@@ -660,16 +660,23 @@ let _saveTimer   = null;
 
 function authErrorMsg(code) {
   const msgs = {
-    'auth/invalid-email':          'E-mail inválido.',
-    'auth/user-not-found':         'Usuário não encontrado.',
-    'auth/wrong-password':         'Senha incorreta.',
-    'auth/email-already-in-use':   'Este e-mail já está cadastrado.',
-    'auth/weak-password':          'Senha muito fraca (mínimo 6 caracteres).',
-    'auth/popup-closed-by-user':   'Login cancelado.',
-    'auth/network-request-failed': 'Erro de rede. Verifique sua conexão.',
-    'auth/invalid-credential':     'E-mail ou senha incorretos.',
+    'auth/invalid-email':           'E-mail inválido.',
+    'auth/user-not-found':          'Usuário não encontrado.',
+    'auth/wrong-password':          'Senha incorreta.',
+    'auth/email-already-in-use':    'Este e-mail já está cadastrado.',
+    'auth/weak-password':           'Senha muito fraca (mínimo 6 caracteres).',
+    'auth/popup-closed-by-user':    'Login cancelado.',
+    'auth/cancelled-popup-request': 'Login cancelado.',
+    'auth/network-request-failed':  'Erro de rede. Verifique sua conexão.',
+    'auth/invalid-credential':      'E-mail ou senha incorretos.',
+    'auth/popup-blocked':           'Pop-up bloqueado pelo navegador. Redirecionando...',
+    'auth/unauthorized-domain':     'Domínio não autorizado no Firebase Console.',
+    'auth/operation-not-allowed':   'Método de login não habilitado. Ative no Firebase Console → Authentication → Sign-in method.',
+    'auth/too-many-requests':       'Muitas tentativas. Aguarde alguns minutos.',
+    'auth/user-disabled':           'Esta conta foi desabilitada.',
+    'auth/missing-email':           'Informe um e-mail válido.',
   };
-  return msgs[code] || 'Erro ao autenticar. Tente novamente.';
+  return msgs[code] || `Erro de autenticação (${code}). Tente novamente.`;
 }
 
 function showAuthError(msg) {
@@ -731,10 +738,20 @@ async function doEmailRegister() {
 
 async function doGoogleLogin() {
   const provider = new firebase.auth.GoogleAuthProvider();
+  provider.setCustomParameters({ prompt: 'select_account' });
   try {
     await fbAuth.signInWithPopup(provider);
   } catch(e) {
-    if (e.code !== 'auth/popup-closed-by-user') showAuthError(authErrorMsg(e.code));
+    // Se o popup foi bloqueado, usa redirecionamento como fallback
+    if (e.code === 'auth/popup-blocked' || e.code === 'auth/cancelled-popup-request') {
+      try {
+        await fbAuth.signInWithRedirect(provider);
+      } catch(e2) {
+        if (e2.code !== 'auth/popup-closed-by-user') showAuthError(authErrorMsg(e2.code));
+      }
+    } else if (e.code !== 'auth/popup-closed-by-user') {
+      showAuthError(authErrorMsg(e.code));
+    }
   }
 }
 
@@ -2334,6 +2351,13 @@ function switchProgTab(tab, el) {
 //  INIT — controlado pelo Firebase Auth
 // ============================================================
 window.addEventListener('DOMContentLoaded', () => {
+  // Captura resultado de redirecionamento do Google Sign-In (fallback de popup bloqueado)
+  fbAuth.getRedirectResult().catch(e => {
+    if (e.code && e.code !== 'auth/no-current-user') {
+      showAuthError(authErrorMsg(e.code));
+    }
+  });
+
   fbAuth.onAuthStateChanged(async (user) => {
     const authScreen = document.getElementById('auth-screen');
     if (user) {
